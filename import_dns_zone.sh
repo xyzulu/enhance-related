@@ -77,10 +77,10 @@ save_essential_records() {
         local name; name=$(jq -r '.name' <<< "$record")
         local value; value=$(jq -r '.value' <<< "$record")
         if [[ "$kind" == "A" && "$name" == "@" ]]; then
-            SAVED_RECORDS["$name"]="{\"kind\": \"$kind\", \"name\": \"$name\", \"value\": \"$value\", \"ttl\": 300}"
+            SAVED_RECORDS["$name"]="{\"kind\": \"$kind\", \"name\": \"$name\", \"value\": \"$value\", \"ttl\": 3600}"
             found=1
         elif [[ "$kind" == "CNAME" && "$name" == "www" ]]; then
-            SAVED_RECORDS["$name"]="{\"kind\": \"$kind\", \"name\": \"$name\", \"value\": \"$value\", \"ttl\": 300}"
+            SAVED_RECORDS["$name"]="{\"kind\": \"$kind\", \"name\": \"$name\", \"value\": \"$value\", \"ttl\": 3600}"
             found=1
         fi
     done < <(jq -c '.[]' <<< "$response")
