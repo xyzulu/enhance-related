@@ -73,10 +73,15 @@ save_essential_records() {
 
     local found=0
     while IFS= read -r record; do
-        local kind; kind=$(jq -r '.kind' <<< "$record")
-        local name; name=$(jq -r '.name' <<< "$record")
-        local value; value=$(jq -r '.value' <<< "$record")
-        value=$(sed 's/"/\\"/g' <<< "$value")
+    local kind; kind=$(jq -r '.kind' <<< "$record")
+    local name; name=$(jq -r '.name' <<< "$record")
+    local value; value=$(jq -r '.value' <<< "$record")
+
+    if [[ "$kind" == "TXT" ]]; then
+        value="\"$value\""
+    fi
+
+    value=$(sed 's/"/\\"/g' <<< "$value")
         if [[ "$kind" == "A" && "$name" == "@" ]]; then
             SAVED_RECORDS["$name"]="{\"kind\": \"$kind\", \"name\": \"$name\", \"value\": \"$value\", \"ttl\": 3600}"
             found=1
