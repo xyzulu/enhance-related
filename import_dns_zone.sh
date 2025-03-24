@@ -10,7 +10,6 @@
 # Hopefully you know how to find these.
 # *********************************************************************************************
 
-
 API_URL="https://control.domain.com/api"
 ORG_ID="xxxx"
 ACCESS_TOKEN="xxxx"
@@ -73,15 +72,16 @@ save_essential_records() {
 
     local found=0
     while IFS= read -r record; do
-    local kind; kind=$(jq -r '.kind' <<< "$record")
-    local name; name=$(jq -r '.name' <<< "$record")
-    local value; value=$(jq -r '.value' <<< "$record")
+        local kind; kind=$(jq -r '.kind' <<< "$record")
+        local name; name=$(jq -r '.name' <<< "$record")
+        local value; value=$(jq -r '.value' <<< "$record")
 
-    if [[ "$kind" == "TXT" ]]; then
-        value="\"$value\""
-    fi
+        if [[ "$kind" == "TXT" ]]; then
+            value="\"$value\""
+        fi
 
-    value=$(sed 's/"/\\"/g' <<< "$value")
+        value=$(sed 's/"/\\"/g' <<< "$value")
+
         if [[ "$kind" == "A" && "$name" == "@" ]]; then
             SAVED_RECORDS["$name"]="{\"kind\": \"$kind\", \"name\": \"$name\", \"value\": \"$value\", \"ttl\": 3600}"
             found=1
@@ -135,7 +135,6 @@ def parse_zone_file(path):
             clean += c
         lines.append(clean.strip())
 
-    # Collapse multiline
     zone = []
     buf = ''
     parens = 0
@@ -213,29 +212,33 @@ PYTHON_EOF
         return 1
     fi
 
-    local record name type ttl value
+    local record name kind ttl value
     while IFS= read -r record; do
-        type=$(jq -r '.type' <<< "$record")
+        kind=$(jq -r '.type' <<< "$record")
         name=$(jq -r '.name' <<< "$record")
         ttl="3600"
         value=$(jq -r '.value' <<< "$record")
 
-        [[ "$type" == "SOA" || "$type" == "NS" ]] && continue
-        [[ "$type" == "A" && "$name" == "@" ]] && continue
-        [[ "$type" == "CNAME" && "$name" == "www" ]] && continue
+        [[ "$kind" == "SOA" || "$kind" == "NS" ]] && continue
+        [[ "$kind" == "A" && "$name" == "@" ]] && continue
+        [[ "$kind" == "CNAME" && "$name" == "www" ]] && continue
 
-        # Normalize name relative to zone
-name="${name%.}"
-name="${name%%.$zone_root}"
-name="${name%%.${zone_root}.}"
-[[ "$name" == "$zone_root" || "$name" == "" ]] && name="@"
+        name="${name%.}"
+        name="${name%%.$zone_root}"
+        name="${name%%.${zone_root}.}"
+        [[ "$name" == "$zone_root" || "$name" == "" ]] && name="@"
 
-# Skip any @ A or www CNAME coming from the zone file
-if [[ "$type" == "A" && "$name" == "@" ]]; then continue; fi
-if [[ "$type" == "CNAME" && "$name" == "www" ]]; then continue; fi
+        if [[ "$kind" == "A" && "$name" == "@" ]]; then continue; fi
+        if [[ "$kind" == "CNAME" && "$name" == "www" ]]; then continue; fi
+
+        if [[ "$kind" == "TXT" ]]; then
+            value="\"$value\""
+        fi
+
+        value=$(sed 's/"/\\"/g' <<< "$value")
 
         local record_json
-        record_json=$(printf '{"kind": "%s", "name": "%s", "value": "%s", "ttl": %s}' "$type" "$name" "$value" "$ttl")
+        record_json=$(printf '{"kind": "%s", "name": "%s", "value": "%s", "ttl": %s}' "$kind" "$name" "$value" "$ttl")
         NEW_RECORDS+=("$record_json")
         parsed_output+="$record_json"$'\n'
     done < <(jq -c '.[]' <<< "$json")
@@ -254,7 +257,6 @@ create_new_records() {
     local create_url="$ZONE_API/records"
     for record in "${SAVED_RECORDS[@]}"; do
         local resp; resp=$(curl -s -w "\n%{http_code}" -X POST -H "$AUTH_HEADER" -H "$CONTENT_TYPE" -d "$record" "$create_url")
-        local body; body=$(head -n1 <<< "$resp")
         local code; code=$(tail -n1 <<< "$resp")
         if [[ "$code" != "200" && "$code" != "201" ]]; then
             printf "Failed to create saved record: %s (HTTP %s)\n" "$record" "$code" >&2
@@ -264,7 +266,6 @@ create_new_records() {
     done
     for record in "${NEW_RECORDS[@]}"; do
         local resp; resp=$(curl -s -w "\n%{http_code}" -X POST -H "$AUTH_HEADER" -H "$CONTENT_TYPE" -d "$record" "$create_url")
-        local body; body=$(head -n1 <<< "$resp")
         local code; code=$(tail -n1 <<< "$resp")
         if [[ "$code" != "200" && "$code" != "201" ]]; then
             printf "Failed to create zone file record: %s (HTTP %s)\n" "$record" "$code" >&2
@@ -317,14 +318,14 @@ main() {
     if ! save_essential_records; then return 1; fi
     if ! parse_zone_file; then return 1; fi
 
-printf "\nWARNING: All existing DNS records will be deleted before import.\n"
-read -rp "Type YES to continue: " CONFIRM
-if [[ "$CONFIRM" != "YES" ]]; then
-    printf "Aborting as per user input.\n" >&2
-    return 1
-fi
+    printf "\nWARNING: All existing DNS records will be deleted before import.\n"
+    read -rp "Type YES to continue: " CONFIRM
+    if [[ "$CONFIRM" != "YES" ]]; then
+        printf "Aborting as per user input.\n" >&2
+        return 1
+    fi
 
-if ! delete_all_records; then return 1; fi
+    if ! delete_all_records; then return 1; fi
     if ! create_new_records; then return 1; fi
 }
 
