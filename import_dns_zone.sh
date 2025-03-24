@@ -1,14 +1,14 @@
 #!/bin/bash
 
-*********************************************************************************************
-* Use at your own risk. This script uses the Enhance API to import a BIND formatted DNS zone. 
-* You will need to provide at least the API url, ORG_ID and Access Token.
-* 
-* Usage: import_dns_zone.sh zonefile.txt
-*
-* During the script you will also need to specify the website ID and the domain ID. 
-* Hopefully you know how to find these.
-*********************************************************************************************
+# *********************************************************************************************
+# Use at your own risk. This script uses the Enhance API to import a BIND formatted DNS zone. 
+# You will need to provide at least the API url, ORG_ID and Access Token.
+# 
+# Usage: import_dns_zone.sh zonefile.txt
+#
+# During the script you will also need to specify the website ID and the domain ID. 
+# Hopefully you know how to find these.
+# *********************************************************************************************
 
 
 API_URL="https://control.domain.com/api"
