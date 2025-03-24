@@ -76,6 +76,7 @@ save_essential_records() {
         local kind; kind=$(jq -r '.kind' <<< "$record")
         local name; name=$(jq -r '.name' <<< "$record")
         local value; value=$(jq -r '.value' <<< "$record")
+        value=$(sed 's/"/\\"/g' <<< "$value")
         if [[ "$kind" == "A" && "$name" == "@" ]]; then
             SAVED_RECORDS["$name"]="{\"kind\": \"$kind\", \"name\": \"$name\", \"value\": \"$value\", \"ttl\": 3600}"
             found=1
