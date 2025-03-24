@@ -311,7 +311,15 @@ main() {
     if ! get_zone_records; then return 1; fi
     if ! save_essential_records; then return 1; fi
     if ! parse_zone_file; then return 1; fi
-    if ! delete_all_records; then return 1; fi
+
+printf "\nWARNING: All existing DNS records will be deleted before import.\n"
+read -rp "Type YES to continue: " CONFIRM
+if [[ "$CONFIRM" != "YES" ]]; then
+    printf "Aborting as per user input.\n" >&2
+    return 1
+fi
+
+if ! delete_all_records; then return 1; fi
     if ! create_new_records; then return 1; fi
 }
 
